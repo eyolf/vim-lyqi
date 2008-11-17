@@ -28,7 +28,7 @@ function! Lyqi_key()
     while b:input_key != "g" 
         "positions the cursor at the end of the previous string. Doesn't
         "capture repeated whitespace, but never mind... cAn be cleaned up with
-        "a general functionc 
+        "a general function 
         call cursor(".", searchpos('\_s', 'ce')[1])
         "input key press
         let b:input_key = nr2char(getchar())
@@ -48,11 +48,12 @@ endfunction
 "#   må kunne telles, i hvert fall for rytmens del), og hente en streng
 "# - enn så lenge begrenset til vanlige strenger, ikke akkorder. 
 function! Get_current_note()
-    execute "normal BdaW"
-    "let save_cursor = getpos(".")
-    "execute "normal daW"
+    call search('\<[a-grs]', 'bc')
+    "execute "normal ?\<[a-grs]?"
+    let save_cursor = getpos(".")
+    execute "normal daW"
     let b:notestring = getreg('"')
-    "call setpos('.', save_cursor)
+    call setpos('.', save_cursor)
 endfunction
 
 
