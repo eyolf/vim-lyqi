@@ -56,6 +56,7 @@ function! Get_current_note()
 endfunction
 
 
+
 "
 "variabler, lånt fra lyqi
 "script-variabler

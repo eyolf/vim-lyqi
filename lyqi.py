@@ -12,6 +12,7 @@
 # time, so that after a "is" is added to "c", pitchmap["a"] = "cis"
 
 import re 
+import math
 import vim
 
 loaded = vim.eval("g:loaded_lyqi")
@@ -32,17 +33,17 @@ acc_keys = ( "c", "v" )
 accmap = dict(zip(acc_keys, accs))
 cauts = ( "!", "?" )
 caut_keys = ( "!", "?" )
-octs = ( ",", "'" )
+cautmap = dict(zip(caut_keys, cauts))
+octs = ( -1, 1 )
 oct_keys = ( "u", "i" )
 octmap = dict(zip(oct_keys, octs))
-durs = ( "128", "64", "32", "16", "8", "4", "2", "1", "\\brevis", "\\longa", "\\maxima" )
+durs = ( "128", "64", "32", "16", "8", "4", "2", "1", "\\breve", "\\longa", "\\maxima" )
 dur_keys = ( "P", "O", "p", "o", "l", "k", "j", "h", "b", "L", "M" )
 durmap = dict(zip(dur_keys, durs))
 dots = ( "." )
 dot_keys = ( "n" )
 
 valid_note = ("pitch", "acc", "caut", "oct", "dur", "dot", "art", "add")
-map = ( pitchmap, durmap, octmap )
 
 current = {
         "pitch": "c", 
@@ -94,8 +95,7 @@ def process_key(key):
     elif key in dur_keys:
         dur(key)
     elif key in dot_keys:
-        find_prev_dur()
-        dot(key)
+        dot()
     else:
         vim.command("normal a" + key)
 
@@ -128,7 +128,7 @@ def acc(input_key):
     #get current note from vim and parse it into current{}
     vim.command("call Get_current_note()")
     global note
-    note = str(vim.eval("b:notestring"))
+    note = vim.eval("b:notestring")
     parse(note)
     #calculate the new value for acc -- up or down?
     if 'e' in current['acc']:
@@ -161,15 +161,14 @@ def reverse_lookup(d,v):
 #======================================================================
                                 #dur {{{2
 #======================================================================
-#   - forandre current['dur']
-#   - føye en rytmeverdi til foregående note
-#   - ikke spille noen lyd
-#
-#def dur(new_val):
-    #parse_note(input_string) -> 
-    #update_current(new_val)
-    #generate_new_note_string(current, new_val)
-    #return new_note
+def dur(input_key):
+    #get current note from vim and parse it into current{}
+    vim.command("call Get_current_note()")
+    note = vim.eval("b:notestring")
+    parse(note)
+    current['dur'] = durmap[input_key]
+    current['dot'] = ''
+    vim.command("normal a" + make_note())
 
 #======================================================================
                              # make_note {{{2
@@ -181,56 +180,67 @@ def make_note():
         new_note += current[i]
     return new_note
 
-#lage ny streng:
+#======================================================================
+                       # cautionary accidentals {{{2
+#======================================================================
+def caut(input_key):
+    vim.command("call Get_current_note()")
+    note = vim.eval("b:notestring")
+    parse(note)
+    current['caut'] = cautmap[input_key]
+    vim.command("normal a" + make_note())
 
-    ##pitchacc + caut + oct + durdot + art
-    #if input = pitch:
-    #    newstring = bare pitch
-    #else:
-    #    newstring = pitch + acc + caut + oct + dur + dot + art
-    #    dvs: sammenkjede alle leddene i current_note 
+#======================================================================
+                            # octave signs {{{2
+#======================================================================
+def oct(input_key):
+    #get current note from vim and parse it into current{}
+    vim.command("call Get_current_note()")
+    note = vim.eval("b:notestring")
+    parse(note)
+    if ',' in current['oct']:
+        octdir = -1
+        octsign = ','
+    elif "'" in current['oct']:
+        octdir = 1
+        octsign = "'"
+    else: 
+        octdir = 0
+        if octmap[input_key] == -1:
+            octsign = ',' 
+        else:
+            octsign = "'"
+    octnum = abs(len(current['oct']) * octdir + octmap[input_key])
+    current['oct'] = octnum * octsign
+    vim.command("normal a" + make_note())
 
 #======================================================================
                                  #dot {{{2
 #======================================================================
 #if input = dot og dur ikke er definert:
 #    #scan tilbake etter siste dur
+#    TODO: make function for backwards scanning after rhythm value.
+#    In the meantime, a default value of 4 will have to do.
 #    dur = siste_dur
+def dot():
+    vim.command("call Get_current_note()")
+    note = vim.eval("b:notestring")
+    parse(note)
+    if not current['dur']:
+        current['dur'] = '4'
+    current['dot'] += '.'
+    vim.command("normal a" + make_note())
 
-# tricky. Hva gjør en dot egentlig? Den forandrer selvfølgelig noten foran,
-# men vel ikke grunnverdien? På den annen side: spiller det noen rolle?
-# Det blir et spørsmål om hva som skal skrives ut: hvis jeg går tilbake og
-# legger til en . til en tidligere note, så må den jo vite hva som er
-# gjeldende verdi, så . må søke tilbake til forrige lovlige noteverdi,
-# legge til den pluss .
-# Dot er med andre  ord en søkefunksjon. Den må dessuten søke etter
-# tidligere dot-er, men bare i kombinasjon med dur. Så i følgende serie:
-#
-#    c d4 e4. f8 g4 a g f
-#                     ^
-# vil et trykk på . ved g søke tilbake etter første forekomst av [1248]\|\(16\)\|\(32\)
-# spare den i en variabel (cur_dur? ja hvorfor ikke?), og sette den inn ved
-# noten foran etter evt. oktavtegn ([a-g][',]*), så det blir
-#
-#                      v
-#    c d4 e4. f8 g4 a g4. f
-#
-# men hva med en serie av punkterte noter:
-#
-#    c4. d e f g a b c
-#                ^
-# der vil et trykk på . ved a søke tilbake til 4, men at det for
-# anledningen allerede er en . der, spiller ingen rolle; den skal likevel
-# sette inn 4. ved a (som jo uansett er en redundans, men ok, det kan være
-# en fordel, og det gjør ingen skade.)
-#
-# SPØRSMÅL:
-# Skal disse funksjonene sette inn tekst direkte, eller hente inn gjeldene
-# noteuttrykk, parse det, og så sette inn resultatet igjen? Det siste er
-# vel det beste, i forbindelse med komplekse uttrykk med både pitch, dur,
-# dot, og articulations? 
-# og akkorder -- det avgjør saken. 
-#
+
+#def find_prev_dur():
+#    dur_search = []
+#    for i in durs:
+#        dur_search[i] = '\\(' + durs[i] + '\\)'
+#    dur_str = '\\|'.join(dur_search)
+#    dur_match = vim.command("call search("+search_str+", 'bcpn')")
+#    current['dur'] = durs[dur_match-1]
+
+
 # %======================================================================
 # Faste tegn
 # %======================================================================
