@@ -8,7 +8,38 @@ Tastetrykk.
 	oversett til notenavn
 	hvilken gruppe tilhører det? Gå til tilsvarende funksjon
 
-	add?						change?
+    notenavn:
+        finne posisjon (etter streng under eller  før cursor)
+        oppdatere current med det nye notenavnet
+        lage ny notestreng (som bare består av notenavn)
+        innføre strengen i dok. på den funne posisjon
+        spille lyd
+
+    rytme: (ex: "j")
+        hente streng under eller før cursor
+        parse streng
+        oppdatere med ny verdi
+        lage ny streng
+        erstatte gammel med ny streng
+        spille lyd
+        
+    oktav, caut, dot:
+        som ovenfor
+
+
+lage ny streng:
+    #pitchacc + caut + oct + durdot + art
+    if input = dot og dur ikke er definert:
+        #scan tilbake etter siste dur
+        dur = siste_dur
+    if input = pitch:
+        newstring = bare pitch
+    else:
+        newstring = pitch + acc + caut + oct + dur + dot + art
+        dvs: sammenkjede alle leddene i 
+
+        
+        add?						change?
 
 def translate_input_key(key):
 #lookup in maps and decide pos

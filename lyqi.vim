@@ -5,155 +5,109 @@
 " @Created:     14-May-2008.
 " @Last Change: 19-Mai-2005.
 " @Revision:    0.0
+"if &cp || exists("loaded_lyqi")
+    "finish
+"endif
+"let loaded_lyqi = 1
+
 " %======================================================================
 " TODO: 
 " sjekke hva lyqi-tool gjør, og tilsv. for lilypond-tool
-if &cp || exists("loaded_lyqi")
-    finish
-endif
-let loaded_lyqi = 1
+"#  Bør også definere noen generelle funksjoner for interaksjon med vim:
+"#  get_pos() -- for å kunne vende tilbake til samme pos etter endringer
+"#  set_map() -- generere en map-streng ut fra pitchmap/rhythmap etc, for å
+"#               sette buffer-lokale mapper.
+
+let g:loaded_lyqi = 1
+
+"#======================================================================
+                              "Lyqi_key {{{2
+"#======================================================================
+function! Lyqi_key()
+    let b:input_key = 1
+    while b:input_key != "g" 
+        "positions the cursor at the end of the previous string. Doesn't
+        "capture repeated whitespace, but never mind... cAn be cleaned up with
+        "a general functionc 
+        call cursor(".", searchpos('\_s', 'ce')[1])
+        "input key press
+        let b:input_key = nr2char(getchar())
+        pyfile lyqi.py
+        " not sure if the loop call should be done here or in lyqi.py
+        redraw
+    endwhile
+endfunction 
 
 
-"
-" %======================================================================
-" LYQI-tool:
-" %======================================================================
-" konstanter:
-"   languages
-"   self-inserting-keys
-"   self-ins.-char-keys
-"            -string-keys
-"   div. systemkonstanter
-"   
-" Interaktive funksjoner
-"   generell funksjon for input av tastetrykk
-"   spesifikke funksjoner for hver enkelt note, pause, change-dur,
-"   change-alteration, oktav, cautionary, reminder
-"                   må kunne rasjonaliseres...
-"   
-"
-"   
-"
-"
-" få fullstendig klarhet i syntaksen for noteuttrykk, som vel ser ut sånn:
-"
-" :
-"
-" [pitch][acc][oct][dur][dot][art]
+
+"%======================================================================  
+                       "function! Get_current_note()
 "%======================================================================
-"%======================================================================
-"
+"# - hente input: isoler strengen:søke tilbake i filen etter
+"#   foregående korrekte notestreng (altså ikke tekststrenger, men akkorder
+"#   må kunne telles, i hvert fall for rytmens del), og hente en streng
+"# - enn så lenge begrenset til vanlige strenger, ikke akkorder. 
+function! Get_current_note()
+    execute "normal BdaW"
+    "let save_cursor = getpos(".")
+    "execute "normal daW"
+    let b:notestring = getreg('"')
+    "call setpos('.', save_cursor)
+endfunction
 
+
+"
 "variabler, lånt fra lyqi
 "script-variabler
-let s:pitches = [ "c", "d", "e", "f", "g", "a", "b"]
-let s:pitch_keys = [ "a", "s", "d", "f", "w", "e", "r", "g" ] 
-let s:accs = [ "eses", "es", "", "is", "isis" ]
-let s:rest = "r"
-let s:skip = "s"
-let s:oct_up = "'"
-let s:oct_down = ","
-let s:self_insert = "()<>{}[]|!?R "
-"globale
-let g:lyqi_rel_oct = 1 "brukes rel oct som default?
-let g:lyqi_force_dur = 0 "skal tonelengde skrives inn alltid?
-let g:lyqi_midi_command = "timidity -iA -B2,8 -0s -EFreverb=0"
-let g:lyqi_midi_kbd = "mymidikbd"
-let g:lyqi_use_midi = 1 "skal midi-processen starte automatisk?
+"let s:pitches = [ "c", "d", "e", "f", "g", "a", "b"]
+"let s:pitch_keys = [ "a", "s", "d", "f", "w", "e", "r", "g" ] 
+"let s:accs = [ "eses", "es", "", "is", "isis" ]
+"let s:rest = "r"
+"let s:skip = "s"
+"let s:oct_up = "'"
+"let s:oct_down = ","
+"let s:self_insert = "()<>{}[]|!?R "
+""globale
+"let g:lyqi_rel_oct = 1 "brukes rel oct som default?
+"let g:lyqi_force_dur = 0 "skal tonelengde skrives inn alltid?
+"let g:lyqi_midi_command = "timidity -iA -B2,8 -0s -EFreverb=0"
+"let g:lyqi_midi_kbd = "mymidikbd"
+"let g:lyqi_use_midi = 1 "skal midi-processen starte automatisk?
 
 "
-" Programmet skal:
-"
-"
-" 1. remappe tangentbordet, gjeldende for bufferen
-" 
-" 2. inneholde funksjoner for å modifisere foregående tekst, i følgende
-" tilfeller ("tekst" i dette tilfelle betyr hele blokken, dvs. strengen før
-" eller under cursor, omgitt enten av whitespace eller <>, og parset i
-" forhold til en standardgruppe):
-"   
-"   ny degree: tilføyer et nytt noteobjekt, og oppdaterer $current. Eneste
-"   grunn til å gjøre det, er for midi-ens del. En degree-inntastning skal
-"   aldri i seg selv føre til en mer omfattende streng, men det må hele
-"   tiden holdes styr på degree og oktav for sist innskrevne note.
-"
-"   når en ny rytmeverdi skrives inn: da skal verdien føyes til foregående
-"   note, eller eksisterende verdi forandres, og $current oppdateres.
-"
-"   punkteringer: ren strengemodifikator: punkt legges til eksplisitt
-"   rytmeverdi i strengen, hvis den eksisterer, eller forbindes med
-"   gjeldende rytmeverdi og føyes til etter pitch-gruppe. Trenger forsåvidt
-"   ikke lagres (vil man noen gang vite hvor mange punkteringer foregående
-"   note hadde? I think not), men det skader vel ikke...
-"
-"   når et oktavtegn skrives inn: to ting skjer: strengen forandres på
-"   enkelt vis (', legges til degree), og $current oppdateres
-"
-"   når en akksidental skrives inn: da skal det føyes is/es til foregående
-"   degree, og dens verdi skal lagres, dvs. keyboard-kommandoen skal
-"   forandres temporært. 
-"
-"   change_degree: trenger kanskje kommando for å forandre degree (ikke
-"   samme som aug)
-"
-" Input-typer: degree_key, octave_key, rhythm_key, dot, change_aug, change_degree
-" 
 " Lagrede interne variabler:
 "   curr_note
 "   prev_note
 "   default note constructions
-"   curr_rhythm     | disse to er kanskje unødvendige; de er allerede del
-"   curr_pitch      | av curr_note
-"
-"Modifikasjonen skjer "utenfor", dvs i en ekstern funksjon som sammenligner
-"den parsede streng (curr_note) med en standard (note) og modifiserer i
-"overensstemmelse med input. 
-"
-"   nødvendige funksjoner:
-"		- hente input: søke tilbake i filen etter foregående korrekte
-	"		notestreng (altså ikke tekststrenger, men akkorder må kunne
-"			telles, i hvert fall for rytmens del), og hente en streng
-"		- parse input: strengen kan variere fra "a" til "ais'4...^.[{
-"			den skal så deles opp og fylle en liste (degree, aug, oct, rhythm,
-"			dot, articulation) for current_note
-"		- oppgradere prev_values med den nye verdien
-"		- forandre strengen etter sml mellom curr_note og prev_values
-"		- føre strengen tilbake til tekstfilen (og avspille en note)
-"   
-"       - pitch_acc
-"       - rhythm_dot
-"       - 
+"   pitch_acc
+"   rhythm_dot
 "
 "%======================================================================
                              " strenge-parser
 " %======================================================================
-" 1. isoler strengen:
-"   - enn så lenge begrenset til vanlige strenger, ikke akkorder.
-"   - finn strengen fra forrige whitespace (eller <) før tegn og frem til cursor;
-"   strip trailing spaces.
 " 2. parse
 "
-function Lyqi_parser()
-    normal B"pyiWel
-    let g:curr_pitch_string= @p
-    " grabs the previous whitespace-enclosed string
-    " and leaves the cursor right after the string
-    let i=strlen(g:curr_pitch_string)
-    " decides the length of the string; could be useful...
-    letter = substr(0,1)
-    if letter == [a-g]
-        curr_pitch['pitch'] = pitch_to_num(letter)
-        "transl. to number, abspitch
-    else 
-        "innsett cursor i edit-mode på begynnelseschar. 
-    endif
-    for (i=1; i<=strlen(curr_note_str); i++)
-        if curr_note_str[i] == [ie]\=s " ingen eller en ie + s
-            curr_pitch['acc'] = acc_to_num(letter)
-        elseif 
-        endif
+"function Lyqi_parser()
+"    normal B"pyiWel
+"    let g:curr_pitch_string= @p
+"    " grabs the previous whitespace-enclosed string
+"    " and leaves the cursor right after the string
+"    let i=strlen(g:curr_pitch_string)
+"    " decides the length of the string; could be useful...
+"    letter = substr(0,1)
+"    if letter == [a-g]
+"        curr_pitch['pitch'] = pitch_to_num(letter)
+"        "transl. to number, abspitch
+"    else 
+"        "innsett cursor i edit-mode på begynnelseschar. 
+"    endif
+"    for (i=1; i<=strlen(curr_note_str); i++)
+"        if curr_note_str[i] == [ie]\=s " ingen eller en ie + s
+"            curr_pitch['acc'] = acc_to_num(letter)
+"        elseif 
+"        endif
 
-        if 
+"        if 
 
 "3. check om strengen er korrekt: 
 "
@@ -175,12 +129,6 @@ function Lyqi_parser()
 " else 
 " " gå tilbake til strengen i teksten for redigering.
 " endif
-"
-
-
-
-
-
 "
 " %======================================================================
 " tonehøyde:
@@ -282,35 +230,35 @@ function Lyqi_parser()
 " 
 " hopper over midi-kommandoene enn så lenge
 
-function print_note(pitch, acc, oct, dur, dot, prev)
-    " defines note as the full LP note construction, e.g. ces'2..
-    " depends on the previous note (for oct. placement), and on predefined
-    " values for pitch/acc and dur/dot, fetched from other functions
-    "
-    let pitchacc="pitches[pitch].accs[acc]"
-    "definer pitchacc
-endfunction
+"function print_note(pitch, acc, oct, dur, dot, prev)
+    "" defines note as the full LP note construction, e.g. ces'2..
+    "" depends on the previous note (for oct. placement), and on predefined
+    "" values for pitch/acc and dur/dot, fetched from other functions
+    ""
+    "let pitchacc="pitches[pitch].accs[acc]"
+    ""definer pitchacc
+"endfunction
 
 
     "abspitch
     "%======================================================================
-    "
+    
 
-    ( let (( abspitch1 ( + ( * 7 ( lyqi-note-octave prevnote)) (lyqi-note-pitch prevnote)))
-    abspitch1 = 
-    finn forrige notes oktav, gange med 7 og legg til tallet for forrige note
-    prevnote er en array som inneholder flere verdier: alle 
-           (abspitch2 (+ (* 7 (lyqi-note-octave note)) (lyqi-note-pitch note)))
-           )
-           (if (< (abs (- abspitch1 abspitch2)) 4) 
+    "( let (( abspitch1 ( + ( * 7 ( lyqi-note-octave prevnote)) (lyqi-note-pitch prevnote)))
+    "abspitch1 = 
+    "finn forrige notes oktav, gange med 7 og legg til tallet for forrige note
+    "prevnote er en array som inneholder flere verdier: alle 
+           "(abspitch2 (+ (* 7 (lyqi-note-octave note)) (lyqi-note-pitch note)))
+           ")
+           "(if (< (abs (- abspitch1 abspitch2)) 4) 
            ""				; same relative octave
-      (if (> abspitch1 abspitch2)
-        (make-string (+ (/ (- abspitch1 abspitch2 4) 7) 1)
-                     (lyqi-get-translation 'octave-down))
-        (make-string (+ (/ (- abspitch2 abspitch1 4) 7) 1)
-                     (lyqi-get-translation 'octave-up)))))
+      "(if (> abspitch1 abspitch2)
+        "(make-string (+ (/ (- abspitch1 abspitch2 4) 7) 1)
+                     "(lyqi-get-translation 'octave-down))
+        "(make-string (+ (/ (- abspitch2 abspitch1 4) 7) 1)
+                     "(lyqi-get-translation 'octave-up)))))
 
-endfunction
+"endfunction
 
   "(type 'note "note, rest or skip")
   "(pitch 0 "the actual note, from 0 (do) to 6 (si)")
@@ -325,16 +273,16 @@ endfunction
 
 "function store rhytm:
 "når en rytmeverdi er satt, skal den lagres i en variabel
-let dur = "4"
+"let dur = "4"
 "og når en ny verdi skrives inn, skal den forandres tilsvarende, og
 "føyes til gjeldende note:
-if new_dur <> dur
-    call change_dur(new_dur)
+"if new_dur <> dur
+    "call change_dur(new_dur)
 
 
-"
+
  "change  rhythm:
-" 
-function change_dur(new_dur)
-    let dur = new_dur
-endfunction
+
+"function change_dur(new_dur)
+    "let dur = new_dur
+"endfunction
