@@ -1,39 +1,87 @@
 " lyqi.vim
-" @Author:      <+NAME+> (mailto:<+EMAIL+>)
-" @Website:     <+WWW+>
+" @Author:      Eyolf Østrem (mailto:eyolf curlie oestrem small com)
+" @Website:     http://oestrem.com
 " @License:     GPL (see http://www.gnu.org/licenses/gpl.txt)
 " @Created:     14-May-2008.
-" @Last Change: 19-Mai-2005.
-" @Revision:    0.0
-"if &cp || exists("loaded_lyqi")
-    "finish
-"endif
-"let loaded_lyqi = 1
-
-" %======================================================================
+" @Last Change: Mon Nov 17 20:32:32 CET 2008
+" @Revision:    0.1
 " TODO: 
-" sjekke hva lyqi-tool gjør, og tilsv. for lilypond-tool
-"#  Bør også definere noen generelle funksjoner for interaksjon med vim:
-"#  get_pos() -- for å kunne vende tilbake til samme pos etter endringer
-"#  set_map() -- generere en map-streng ut fra pitchmap/rhythmap etc, for å
-"#               sette buffer-lokale mapper.
+    " Navigation, 
+    " error correction (undo), 
+    " macros for \ficta, \fermata, " \times, etc
+    " maps
+"" ------------------------------------------------------------------------------
+" Exit when your app has already been loaded (or "compatible" mode set)
+"if exists("g:loaded_Lyqi") || &cp
+  "finish
+"endif
+let g:loaded_Lyqi = 1 " your version number
+"let s:keepcpo           = &cpo
+"set cpo&vim
 
-let g:loaded_lyqi = 1
+" Public Interface:
+" AppFunction: is a function you expect your users to call
+" PickAMap: some sequence of characters that will run your AppFunction
+" Repeat these three lines as needed for multiple functions which will
+" be used to provide an interface for the user
+"map! <unique> <f2> :call Lyqi_key()<cr>
+
+" Global Maps:
+"
+"map <silent> <unique> <script> <Plug>Lyqi_key
+" \ :set lz<CR>:call <SID>Lyqi_key<cr>:set nolz<CR>
+
+" ------------------------------------------------------------------------------
+" s:AppFunction: this function is available vi the <Plug>/<script> interface above
+"fun! s:Lyqi_key()
+  "..whatever..
+
+"  " your script function can set up maps to internal functions
+"  nmap <silent> <Left> :set lz<CR>:silent! call <SID>AppFunction2<CR>:set nolz<CR>
+
+"  " your app can call functions in its own script and not worry about name
+"  " clashes by preceding those function names with <SID>
+"  call s:InternalAppFunction(...)
+
+"  " or you could call it with
+"  call s:InternalAppFunction(...)
+"endfun
+
+" ------------------------------------------------------------------------------
+" s:InternalAppFunction: this function cannot be called from outside the
+" script, and its name won't clash with whatever else the user has loaded
+"fun! s:InternalAppFunction(...)
+
+"  ..whatever..
+"endfun
+
+" ------------------------------------------------------------------------------
+"let &cpo= s:keepcpo
+"unlet s:keepcpo
 
 "#======================================================================
                               "Lyqi_key {{{2
 "#======================================================================
 function! Lyqi_key()
     let b:input_key = 1
-    while b:input_key != "g" 
-        "positions the cursor at the end of the previous string. Doesn't
-        "capture repeated whitespace, but never mind... cAn be cleaned up with
+    while b:input_key != "å" 
+        "positions the cursor at current or following whitespace. Doesn't
+        "capture repeated whitespace, but never mind... can be cleaned up with
         "a general function 
         call cursor(".", searchpos('\_s', 'ce')[1])
         "input key press
         let b:input_key = nr2char(getchar())
-        pyfile lyqi.py
-        " not sure if the loop call should be done here or in lyqi.py
+        if b:input_key == 't'
+            exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
+            redraw
+            continue
+            if b:input_key == '}'
+                exe "normal a } "
+                redraw
+                continue
+            endif
+        endif
+        pyfile ~/.vim/ftplugin/lilypond.py
         redraw
     endwhile
 endfunction 

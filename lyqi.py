@@ -15,8 +15,8 @@ import re
 import math
 import vim
 
-loaded = vim.eval("g:loaded_lyqi")
-if loaded == 1:
+loaded = vim.eval("g:loaded_Lyqi")
+if loaded == 0.1:
     initialize()
 
 def initialize():
@@ -24,7 +24,7 @@ def initialize():
     pitches = ( "c", "d", "e", "f", "g", "a", "b", "s", "r", "R" )
     pitch_keys = ( "a", "s", "d", "f", "w", "e", "r", "q", "g", "G" ) 
     pitchmap = dict(zip(pitch_keys, pitches))
-    vim.command("let g:loaded_lyqi = 0")
+    vim.command("let g:loaded_Lyqi = 0")
     return pitchmap
 
 
@@ -35,7 +35,7 @@ cauts = ( "!", "?" )
 caut_keys = ( "!", "?" )
 cautmap = dict(zip(caut_keys, cauts))
 octs = ( -1, 1 )
-oct_keys = ( "u", "i" )
+oct_keys = ( "m", "i" )
 octmap = dict(zip(oct_keys, octs))
 durs = ( "128", "64", "32", "16", "8", "4", "2", "1", "\\breve", "\\longa", "\\maxima" )
 dur_keys = ( "P", "O", "p", "o", "l", "k", "j", "h", "b", "L", "M" )
@@ -63,11 +63,11 @@ vim_note = ""
 # care of the syntactic inconsistency which allows both "es/as" and
 # "ees/aes". 
 
-notestring = r"""^(?P<pitch>[a-g])
+notestring = r"""^(?P<pitch>[a-grsR])
 (?P<acc>(((ses)|(s))|((es){1,2})|((is){1,2}))?)
 (?P<caut>[?!]*)
 (?P<oct>[,']*)
-(?P<dur>(1|2|4|8|(16)|(32)|(64)|(\\breve)|(\\longa)|(\\maxima))?)
+(?P<dur>((16)|1|2|4|8|(32)|(64)|(\\breve)|(\\longa)|(\\maxima))?)
 (?P<dot>[.]*)
 (?P<art>([-_^\\].*)*)
 (?P<add>.*)$"""
