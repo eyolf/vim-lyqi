@@ -109,7 +109,6 @@ endfun
 " stage.
 function! Get_current_note() 
     call search('\<[a-gRrs]', 'bc')
-    "execute "normal ?\<[a-gRrs]?"
     let save_cursor = getpos(".") 
     execute "normal diW" 
     let b:notestring = getreg('"') 
@@ -118,6 +117,7 @@ endfunction
 "======================================================================
                               "Lyqi_key {{{1
 "======================================================================
+" main function {{{2
 function! Lyqi_key()
     let b:input_key = 1
     while b:input_key != "å" 
@@ -125,10 +125,20 @@ function! Lyqi_key()
         "capture repeated whitespace, but never mind... can be cleaned up with
         "a general function 
         call cursor(".", searchpos('\_s', 'ce')[1]+1)
-        match Error /\<\S\{-}\%#.\{-}\>/
+        match Error /\<\S\{-}\%#.\{-}\>\|^\%#\s*/
         "input key press
-        let b:input_key = nr2char(getchar())
-        if b:input_key == 't'
+        let b:input_key = getchar()
+        if b:input_key == "\<Left>"
+            normal 2B
+            "call cursor(".", searchpos('\_s', 'be')[1])
+            redraw
+            continue
+        elseif b:input_key == "\<Right>"
+            "normal W
+            "call cursor(".", searchpos('\_s', 'e')[1])
+            redraw
+            continue
+        elseif nr2char(b:input_key) == 't'
             exe "normal a \\times " . input("Fraction: ", "2/3") . " {" 
             redraw
             continue
@@ -137,11 +147,16 @@ function! Lyqi_key()
                 redraw
                 continue
             endif
-        elseif b:input_key == '.'
-            normal a\fermata
+        elseif nr2char(b:input_key) == '.'
+            normal a \fermata
+            redraw
+            continue
+        elseif b:input_key == '\'
+            exe "normal a \\" . input("Escaped sequence: ") 
             redraw
             continue
         else
+            let b:input_key = nr2char(b:input_key)
 " here begins the python code which does all the string processing and --
 " eventually -- the midi output.
 " Contains: 
@@ -231,7 +246,7 @@ def acc(input_key):
         # her er det en feil: jeg forandrer key og ikke val, eller tvert om ; er
         # for trøtt til å fikse det nå.
     for k in pitchmap:
-        if pitchmap[k] == current['pitch']:
+        if pitchmap[k][:1] == current['pitch']:
             pitchmap[k] = current['pitch'] + current['acc']
     vim.command("normal a" + make_note())
 
@@ -324,6 +339,7 @@ EOF
         endif
         redraw
     endwhile
+    exe match
 endfunction 
 
 
