@@ -11,7 +11,7 @@
     " macros for \ficta, \fermata, " \times, etc
     " maps
 "======================================================================
-" USAGE:
+" USAGE: {{{1
 "======================================================================
 " The script simplifies note entry for lilypond files. Three different
 " kinds of tasks are performed with single or just-a-few key presses: 
@@ -111,7 +111,7 @@ function! Get_current_note()
     call search('\<[a-gRrs]', 'bc')
     "execute "normal ?\<[a-gRrs]?"
     let save_cursor = getpos(".") 
-    execute "normal daW" 
+    execute "normal diW" 
     let b:notestring = getreg('"') 
     call setpos('.', save_cursor) 
 endfunction
@@ -125,6 +125,7 @@ function! Lyqi_key()
         "capture repeated whitespace, but never mind... can be cleaned up with
         "a general function 
         call cursor(".", searchpos('\_s', 'ce')[1])
+        match Error /\<\S\{-}\%#.\{-}\>/
         "input key press
         let b:input_key = nr2char(getchar())
         if b:input_key == 't'
@@ -155,6 +156,8 @@ function! Lyqi_key()
 "
 python << EOF
 #======================================================================
+                              #process_key(): {{{2
+#======================================================================
 def process_key():
     key = vim.eval("b:input_key")
     if key in pitch_keys:
@@ -170,7 +173,7 @@ def process_key():
     elif key in dot_keys:
         dot()
     else:
-        vim.command("normal a" + key)
+        vim.command("normal a " + key)
 
 process_key()
 
@@ -188,16 +191,16 @@ def parse(input_string):
 
                                 #pitch {{{2
 #======================================================================
-# - forandre current['pitch'] 
-# - avspille en lyd i overensstemmelse med cur_note['pitch'] og [oct]
+# - change current['pitch'] 
+# - TODO: play a sound according to cur_note['pitch'] and [oct]
 
 def pitch(input_key):
     current['pitch'] = pitchmap[input_key]
     n = current['pitch']
     if vim.command("echo col('.')") == 1:
-        vim.command("normal i" + n)
+        vim.command("normal i" + n + " ")
     else:
-        vim.command("normal a" + n)
+        vim.command("normal a" + n + " ")
 
 
 #======================================================================
@@ -230,7 +233,7 @@ def acc(input_key):
     for k in pitchmap:
         if pitchmap[k] == current['pitch']:
             pitchmap[k] = current['pitch'] + current['acc']
-    vim.command("normal a" + make_note())
+    vim.command("normal a " + make_note())
 
 def reverse_lookup(d,v):
     for k in d:
@@ -247,7 +250,7 @@ def dur(input_key):
     parse(note)
     current['dur'] = durmap[input_key]
     current['dot'] = ''
-    vim.command("normal a" + make_note())
+    vim.command("normal a " + make_note())
 
 #======================================================================
                              #make_note {{{2
@@ -267,7 +270,7 @@ def caut(input_key):
     note = vim.eval("b:notestring")
     parse(note)
     current['caut'] = cautmap[input_key]
-    vim.command("normal a" + make_note())
+    vim.command("normal a " + make_note())
 
 #======================================================================
                             #octave signs {{{2
@@ -291,7 +294,7 @@ def oct(input_key):
             octsign = "'"
     octnum = abs(len(current['oct']) * octdir + octmap[input_key])
     current['oct'] = octnum * octsign
-    vim.command("normal a" + make_note())
+    vim.command("normal a " + make_note())
 
 #======================================================================
                                  #dot {{{2
@@ -305,7 +308,7 @@ def dot():
     if not current['dur']:
         current['dur'] = '4'
     current['dot'] += '.'
-    vim.command("normal a" + make_note())
+    vim.command("normal a " + make_note())
 
 
 #dur = siste_dur
