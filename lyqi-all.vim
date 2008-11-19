@@ -124,12 +124,12 @@ function! Lyqi_key()
         "positions the cursor at current or following whitespace. Doesn't
         "capture repeated whitespace, but never mind... can be cleaned up with
         "a general function 
-        call cursor(".", searchpos('\_s', 'ce')[1])
+        call cursor(".", searchpos('\_s', 'ce')[1]+1)
         match Error /\<\S\{-}\%#.\{-}\>/
         "input key press
         let b:input_key = nr2char(getchar())
         if b:input_key == 't'
-            exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
+            exe "normal a \\times " . input("Fraction: ", "2/3") . " {" 
             redraw
             continue
             if b:input_key == '}'
@@ -198,9 +198,9 @@ def pitch(input_key):
     current['pitch'] = pitchmap[input_key]
     n = current['pitch']
     if vim.command("echo col('.')") == 1:
-        vim.command("normal i" + n + " ")
+        vim.command("normal i " + n)
     else:
-        vim.command("normal a" + n + " ")
+        vim.command("normal a " + n)
 
 
 #======================================================================
@@ -233,7 +233,7 @@ def acc(input_key):
     for k in pitchmap:
         if pitchmap[k] == current['pitch']:
             pitchmap[k] = current['pitch'] + current['acc']
-    vim.command("normal a " + make_note())
+    vim.command("normal a" + make_note())
 
 def reverse_lookup(d,v):
     for k in d:
@@ -250,7 +250,7 @@ def dur(input_key):
     parse(note)
     current['dur'] = durmap[input_key]
     current['dot'] = ''
-    vim.command("normal a " + make_note())
+    vim.command("normal a" + make_note())
 
 #======================================================================
                              #make_note {{{2
@@ -270,7 +270,7 @@ def caut(input_key):
     note = vim.eval("b:notestring")
     parse(note)
     current['caut'] = cautmap[input_key]
-    vim.command("normal a " + make_note())
+    vim.command("normal a" + make_note())
 
 #======================================================================
                             #octave signs {{{2
@@ -294,7 +294,7 @@ def oct(input_key):
             octsign = "'"
     octnum = abs(len(current['oct']) * octdir + octmap[input_key])
     current['oct'] = octnum * octsign
-    vim.command("normal a " + make_note())
+    vim.command("normal a" + make_note())
 
 #======================================================================
                                  #dot {{{2
@@ -308,7 +308,7 @@ def dot():
     if not current['dur']:
         current['dur'] = '4'
     current['dot'] += '.'
-    vim.command("normal a " + make_note())
+    vim.command("normal a" + make_note())
 
 
 #dur = siste_dur
