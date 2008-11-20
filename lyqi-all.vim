@@ -7,9 +7,8 @@
 " @Revision:    0.0.1
 " TODO:  {{{1
     " Navigation, 
-    " error correction (undo), 
     " macros for \ficta, \fermata, " \times, etc
-    " maps
+    " maps/plugin architecture
 "======================================================================
 " USAGE: {{{1
 "======================================================================
@@ -97,86 +96,20 @@ notestring = r"""^(?P<pitch>[a-grsR])
 (?P<art>([-_^\\].*)*)
 (?P<add>.*)$"""
 parsed_note = re.compile(notestring,  re.VERBOSE) 
-EOF
-endfun
 
-call Lyqi_init()
-
-"======================================================================
-"function! Get_current_note() {{{1
-"======================================================================
-" collects the note-string prior to the cursor position (here only a
-" rudimentary check is done: the first string which begins with one of
-" the note-characters)
-" So far limited to plain strings; chords will have to come at a later
-" stage.
-function! Get_current_note() 
-    call search('\<[a-gRrs]', 'bc')
-    let save_cursor = getpos(".") 
-    execute "normal diW" 
-    let b:notestring = getreg('"') 
-    call setpos('.', save_cursor) 
-endfunction
-"======================================================================
-                              "Lyqi_key {{{1
-"======================================================================
-" main function {{{2
-function! Lyqi_key()
-    2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
-    match WarningMsg /\%#/
-    let b:input_key = 1
-    while b:input_key != "å" 
-        "positions the cursor at current or following whitespace. Doesn't
-        "capture repeated whitespace, but never mind... can be cleaned up with
-        "a general function 
-        call cursor(".", searchpos('\_s', 'ce')[1])
-        "input key press
-        let b:input_key = nr2char(getchar())
-        "if b:input_key == "\<Left>"
-            "normal 2B
-            ""call cursor(".", searchpos('\_s', 'be')[1])
-            "redraw
-            "continue
-        "elseif b:input_key == "\<Right>"
-            ""normal W
-            ""call cursor(".", searchpos('\_s', 'e')[1])
-            "redraw
-            "continue
-        if b:input_key == 't'
-            exe "normal a \\times " . input("Fraction: ", "2/3") . " {" 
-            redraw
-            continue
-            if b:input_key == '}'
-                exe "normal a } "
-                redraw
-                continue
-            endif
-        elseif b:input_key == '.'
-            normal a \fermata
-            redraw
-            continue
-        elseif b:input_key == '\'
-            exe "normal a \\" . input("Escaped sequence: ") 
-            redraw
-            continue
-        elseif b:input_key == 'z'
-            normal u
-            redraw
-            continue
-        else
-" here begins the python code which does all the string processing and --
-" eventually -- the midi output.
-" Contains: 
-" - a wrapper function, process_key(), which decides which function to call
-"   depending on the input key, 
-" - specialized functions for each of the note-string elemenst (pitch, acc,
-"   caut, oct, dur, dot, art (for articulation signs etc.) and add
-"   (whatever is left over...)
-" - make_note(), which generates the new note string.
-"
-" TODO: add functions for art and add
-"
-python << EOF
+# here begins the python code which does all the string processing and --
+# eventually -- the midi output.
+# Contains: 
+# - a wrapper function, process_key(), which decides which function to call
+#   depending on the input key, 
+# - specialized functions for each of the note-string elemenst (pitch, acc,
+#   caut, oct, dur, dot, art (for articulation signs etc.) and add
+#   (whatever is left over...)
+# - make_note(), which generates the new note string.
+#
+# TODO: add functions for art and add
+#
+# Python functions {{{1
 #======================================================================
                                 #Parse {{{2
 #======================================================================
@@ -206,13 +139,10 @@ def pitch(input_key):
         vim.command("normal a" + n)
         #vim.command("normal a ")
 
-
-
 #======================================================================
                                 #acc {{{2
 #======================================================================
 def acc(input_key):
-    #get current note from vim and parse it into current{}
     vim.command("call Get_current_note()")
     global note
     note = vim.eval("b:notestring")
@@ -233,39 +163,21 @@ def acc(input_key):
         current['acc'] = 'is'
     else:
         current['acc'] = 'isis'
-        # her er det en feil: jeg forandrer key og ikke val, eller tvert om ; er
-        # for trøtt til å fikse det nå.
     for k in pitchmap:
         if pitchmap[k][:1] == current['pitch']:
             pitchmap[k] = current['pitch'] + current['acc']
     vim.command("normal i" + make_note())
 
-def reverse_lookup(d,v):
-    for k in d:
-        if d[k] == v:
-            return k
-
 #======================================================================
                                 #dur {{{2
 #======================================================================
 def dur(input_key):
-    #get current note from vim and parse it into current{}
     vim.command("call Get_current_note()")
     note = vim.eval("b:notestring")
     parse(note)
     current['dur'] = durmap[input_key]
     current['dot'] = ''
     vim.command("normal i" + make_note())
-
-#======================================================================
-                             #make_note {{{2
-#======================================================================
-def make_note():
-    # bruker bare current, så ingen args er nødvendige
-    new_note = ""
-    for i in valid_note:
-        new_note += current[i]
-    return new_note
 
 #======================================================================
                        #cautionary accidentals {{{2
@@ -325,7 +237,16 @@ def dot():
 #    dur_match = vim.command("call search("+search_str+", 'bcpn')")
 #    current['dur'] = durs[dur_match-1]
 
+#======================================================================
+                             #make_note {{{2
+#======================================================================
+def make_note():
+    new_note = ""
+    for i in valid_note:
+        new_note += current[i]
+    return new_note
 
+#======================================================================
                               #process_key(): {{{2
 #======================================================================
 def process_key():
@@ -344,10 +265,105 @@ def process_key():
         dot()
     else:
         vim.command("normal a " + key)
-
-process_key()
-
 EOF
+endfun
+" }}}2
+call Lyqi_init()
+
+"Vim functions {{{1
+"======================================================================
+                    "function! Get_current_note() {{{2
+"======================================================================
+" collects the note-string prior to the cursor position (here only a
+" rudimentary check is done: the first string which begins with one of
+" the note-characters)
+" So far limited to plain strings; chords will have to come at a later
+" stage.
+function! Get_current_note() 
+    call search('\<[a-gRrs]', 'bc')
+    "let save_cursor = getpos(".") 
+    execute "normal diW" 
+    let b:notestring = getreg('"') 
+    "call setpos('.', save_cursor) 
+endfunction
+"======================================================================
+                              "Lyqi_key {{{2
+"======================================================================
+function! Lyqi_key()
+    2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+    match WarningMsg /\%#/
+    let b:input_key = 1
+    while b:input_key != "å" 
+        "positions the cursor at current or following whitespace. Doesn't
+        "capture repeated whitespace, but never mind... can be cleaned up with
+        "a general function 
+        "call cursor(".", searchpos('\_s', 'ce')[1])
+        call search('\_s', 'c')
+        redraw
+        "input key press
+        " navigation keys; interpreted directly
+        let b:input_key = getchar()
+        if b:input_key == "\<Left>"
+            call search('\_s', 'b')
+            redraw
+            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            continue
+        elseif b:input_key == "\<Right>"
+            call search('\_s', '')
+            redraw
+            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            continue
+        elseif b:input_key == "\<Down>"
+            normal j
+            call search('\_s', '')
+            redraw
+            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            continue
+        elseif b:input_key == "\<Up>"
+            normal k
+            call search('\_s', '')
+            redraw
+            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            continue
+        else
+            " character keys; interpreted after conversion to char
+            let b:input_key = nr2char(b:input_key)
+            if b:input_key == 't'
+                exe "normal a \\times " . input("Fraction: ", "2/3") . " {" 
+                redraw
+                continue
+                if b:input_key == '}'
+                    exe "normal a } "
+                    redraw
+                    continue
+                endif
+            elseif b:input_key == '.'
+                exe "normal a\fermata "
+                redraw
+                continue
+            elseif b:input_key == '\'
+                exe "normal a\\" . input("Escaped sequence: ") . " "
+                redraw
+                continue
+            elseif b:input_key == 'x'
+                call Get_current_note()
+                let line = getline('.')
+                substitute(eval(line), " \+", " ", "g")
+                redraw
+                continue
+            elseif b:input_key == 'z'
+                normal u
+                redraw
+                continue
+            elseif b:input_key == 'Z'
+                redo
+                redraw
+                continue
+            else
+                python process_key()
+                redraw
+            endif
+            redraw
         endif
         redraw
     endwhile
