@@ -96,8 +96,11 @@ notestring = r"""^(?P<pitch>[a-grsR])
 (?P<dot>[.]*)
 (?P<art>([-_^\\].*)*)
 (?P<add>.*)$"""
+parsed_note = re.compile(notestring,  re.VERBOSE) 
 EOF
 endfun
+
+call Lyqi_init()
 
 "======================================================================
 "function! Get_current_note() {{{1
@@ -119,26 +122,27 @@ endfunction
 "======================================================================
 " main function {{{2
 function! Lyqi_key()
+    2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+    match WarningMsg /\%#/
     let b:input_key = 1
     while b:input_key != "å" 
         "positions the cursor at current or following whitespace. Doesn't
         "capture repeated whitespace, but never mind... can be cleaned up with
         "a general function 
-        call cursor(".", searchpos('\_s', 'ce')[1]+1)
-        match Error /\<\S\{-}\%#.\{-}\>\|^\%#\s*/
+        call cursor(".", searchpos('\_s', 'ce')[1])
         "input key press
-        let b:input_key = getchar()
-        if b:input_key == "\<Left>"
-            normal 2B
-            "call cursor(".", searchpos('\_s', 'be')[1])
-            redraw
-            continue
-        elseif b:input_key == "\<Right>"
-            "normal W
-            "call cursor(".", searchpos('\_s', 'e')[1])
-            redraw
-            continue
-        elseif nr2char(b:input_key) == 't'
+        let b:input_key = nr2char(getchar())
+        "if b:input_key == "\<Left>"
+            "normal 2B
+            ""call cursor(".", searchpos('\_s', 'be')[1])
+            "redraw
+            "continue
+        "elseif b:input_key == "\<Right>"
+            ""normal W
+            ""call cursor(".", searchpos('\_s', 'e')[1])
+            "redraw
+            "continue
+        if b:input_key == 't'
             exe "normal a \\times " . input("Fraction: ", "2/3") . " {" 
             redraw
             continue
@@ -147,7 +151,7 @@ function! Lyqi_key()
                 redraw
                 continue
             endif
-        elseif nr2char(b:input_key) == '.'
+        elseif b:input_key == '.'
             normal a \fermata
             redraw
             continue
@@ -155,8 +159,11 @@ function! Lyqi_key()
             exe "normal a \\" . input("Escaped sequence: ") 
             redraw
             continue
+        elseif b:input_key == 'z'
+            normal u
+            redraw
+            continue
         else
-            let b:input_key = nr2char(b:input_key)
 " here begins the python code which does all the string processing and --
 " eventually -- the midi output.
 " Contains: 
@@ -171,31 +178,9 @@ function! Lyqi_key()
 "
 python << EOF
 #======================================================================
-                              #process_key(): {{{2
-#======================================================================
-def process_key():
-    key = vim.eval("b:input_key")
-    if key in pitch_keys:
-        pitch(key)
-    elif key in acc_keys:
-        acc(key)
-    elif key in oct_keys:
-        oct(key)
-    elif key in caut_keys:
-        caut(key)
-    elif key in dur_keys:
-        dur(key)
-    elif key in dot_keys:
-        dot()
-    else:
-        vim.command("normal a " + key)
-
-process_key()
-
                                 #Parse {{{2
 #======================================================================
 def parse(input_string):
-    parsed_note = re.compile(notestring,  re.VERBOSE) 
     match_obj = parsed_note.search(input_string)
     for i in valid_note:
         current[i] = match_obj.group(i)
@@ -212,10 +197,15 @@ def parse(input_string):
 def pitch(input_key):
     current['pitch'] = pitchmap[input_key]
     n = current['pitch']
-    if vim.command("echo col('.')") == 1:
-        vim.command("normal i " + n)
-    else:
+    if vim.eval("col('.')") == 1:
+        vim.command("normal i" + n)
+    elif vim.eval("col('$')-col('.')") == 1:
         vim.command("normal a " + n)
+    else:
+        n += " " 
+        vim.command("normal a" + n)
+        #vim.command("normal a ")
+
 
 
 #======================================================================
@@ -248,7 +238,7 @@ def acc(input_key):
     for k in pitchmap:
         if pitchmap[k][:1] == current['pitch']:
             pitchmap[k] = current['pitch'] + current['acc']
-    vim.command("normal a" + make_note())
+    vim.command("normal i" + make_note())
 
 def reverse_lookup(d,v):
     for k in d:
@@ -265,7 +255,7 @@ def dur(input_key):
     parse(note)
     current['dur'] = durmap[input_key]
     current['dot'] = ''
-    vim.command("normal a" + make_note())
+    vim.command("normal i" + make_note())
 
 #======================================================================
                              #make_note {{{2
@@ -285,7 +275,7 @@ def caut(input_key):
     note = vim.eval("b:notestring")
     parse(note)
     current['caut'] = cautmap[input_key]
-    vim.command("normal a" + make_note())
+    vim.command("normal i" + make_note())
 
 #======================================================================
                             #octave signs {{{2
@@ -309,7 +299,7 @@ def oct(input_key):
             octsign = "'"
     octnum = abs(len(current['oct']) * octdir + octmap[input_key])
     current['oct'] = octnum * octsign
-    vim.command("normal a" + make_note())
+    vim.command("normal i" + make_note())
 
 #======================================================================
                                  #dot {{{2
@@ -323,7 +313,7 @@ def dot():
     if not current['dur']:
         current['dur'] = '4'
     current['dot'] += '.'
-    vim.command("normal a" + make_note())
+    vim.command("normal i" + make_note())
 
 
 #dur = siste_dur
@@ -335,15 +325,37 @@ def dot():
 #    dur_match = vim.command("call search("+search_str+", 'bcpn')")
 #    current['dur'] = durs[dur_match-1]
 
+
+                              #process_key(): {{{2
+#======================================================================
+def process_key():
+    key = vim.eval("b:input_key")
+    if key in pitch_keys:
+        pitch(key)
+    elif key in acc_keys:
+        acc(key)
+    elif key in oct_keys:
+        oct(key)
+    elif key in caut_keys:
+        caut(key)
+    elif key in dur_keys:
+        dur(key)
+    elif key in dot_keys:
+        dot()
+    else:
+        vim.command("normal a " + key)
+
+process_key()
+
 EOF
         endif
         redraw
     endwhile
-    exe match
+    match
 endfunction 
 
+match
 
 
 
 " vim:fdm=marker
-

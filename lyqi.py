@@ -4,12 +4,14 @@
                           #initialize values{{{1
 #======================================================================
 # pitches (rhythms, ...)  contains the pitch names used in the file, plus
-# "s" and "r" pitch_keys is a (user-defined) variable list of keyboard keys
-# to go with the various pitch names pitchmap gives the current translation
-# between keyb. input and output to document:
-# pitchmap["a"] = "c".  The dictionary is initialized with default values,
+# "s" and "r/R" 
+# pitch_keys is a (user-defined) variable list of keyboard keys
+# to go with the various pitch names 
+# pitchmap gives the current translation between keyb. input and output to
+# document: pitchmap["a"] = "c". 
+# The dictionary is initialized with default values,
 # but  will be changed along the way, to store the current values at any
-# time, so that after a "is" is added to "c", pitchmap["a"] = "cis"
+# time, so that after an "is" is added to "c", pitchmap["a"] = "cis"
 
 import re 
 import math
