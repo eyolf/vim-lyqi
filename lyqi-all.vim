@@ -28,6 +28,9 @@
 " which are laid out 'ergonomically' from the \breve (B) to the 32nd note (P):
 " 64th and 128th notes re-use the O and P keys in shifted position, and
 " \longa and \maxima are placed on <S-l> and <S-m>. 
+" Flats and sharps are added with 'c' and 'v', octaves are modified with
+" 'i' (up) and 'm' (down), and cautionary accidentals  are entered with '!'
+" and '?'. A \fermata is added with '.'
 "
 " -------------------------------------------------------------------------  
 " |  s  |  g  |  a  |  b  |times|     |     |  '  |16/64|32/128     |     |
@@ -391,6 +394,9 @@ endfunction
 
 match
 
+command! LyqiMode :call Lyqi_key()
+noremap <f2> LyqiMode<cr>
 
 
 " vim:fdm=marker
+"
