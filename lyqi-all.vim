@@ -6,9 +6,13 @@
 " @Last Change: Mon Nov 17 20:32:32 CET 2008
 " @Revision:    0.0.1
 " TODO:  {{{1
-    " Navigation, 
     " macros for \ficta, \fermata, " \times, etc
     " maps/plugin architecture
+    " customizable, user-defined layout and macros
+    " templates
+    " fix the spacing bugs that are still left (why won't pitch() enter a
+    " space before the note when the cursor is on the end of the line?)
+    
 "======================================================================
 " USAGE: {{{1
 "======================================================================
@@ -17,10 +21,13 @@
 " - entry of a new note; 
 " - modification of an existing note (wrt duration, accidentals, octave,
 "   dots, cautionary accidentals, and articulation signs); 
-" - certain special signs, such as fermata, musica ficta, \times {}, etc.
+" - certain special signs, such as fermata, musica ficta, \times x/y {}, etc.
 "
-" The keyboard is completely remapped, the left hand enters the pitches,
-" the right hand the rhythms:
+" The keyboard is completely remapped: the left hand enters the pitches, in
+" the sequence of a piano keyboard, and the right hand 'plays' the rhythms,
+" which are laid out 'ergonomically' from the \breve (B) to the 32nd note (P):
+" 64th and 128th notes re-use the O and P keys in shifted position, and
+" \longa and \maxima are placed on <S-l> and <S-m>. 
 "
 " -------------------------------------------------------------------------  
 " |  s  |  g  |  a  |  b  |times|     |     |  '  |16/64|32/128     |     |
@@ -29,7 +36,7 @@
 "   |  c  |  d  |  e  |  f  | r/R |  1  |  2  |  4  |  8  |     |     |     |
 "   |  A  |  S  |  D  |  F  |  G  |  H  |  J  |  K  |  L  |     |     |     |
 "   ------------------------------------------------------------------------- 
-"     |undo |     |flat |sharp|breve| dot |  ,  |     |     |     |     |
+"     |undo | del |flat |sharp|breve| dot |  ,  |     |     |     |     |
 "     |  Z  |  X  |  C  |  V  |  B  |  N  |  M  |     |     |     |     |
 "     -------------------------------------------------------------------
 "
@@ -47,14 +54,25 @@
 " 
 " one would type the keys 'vv!mbnn' in any order.
 " 
-" 
-"======================================================================
-"
-"
+"The mode is initialized on startup, or with the vim command Lyqi_init(). To
+"enter music, run the function Lyqi_key(), which is an infinite loop (exit
+"with <C-c>). 
+
+"The arrow keys navigate between the note strings, and 'z' is mapped to
+"'undo'.
+
 "======================================================================
 "   Initialization {{{1
 "======================================================================
+if exists("g:loaded_Lyqi")
+    delfun Lyqi_init
+    delfun Lyqi_key
+    delfun Get_current_note
+endif
+
 let g:loaded_Lyqi = 1 " your version number
+
+
 
 fun! Lyqi_init()
     " initializes the values that are used throughout. All are immutable
@@ -140,6 +158,7 @@ def pitch(input_key):
         #vim.command("normal a ")
 
 #======================================================================
+
                                 #acc {{{2
 #======================================================================
 def acc(input_key):
@@ -329,11 +348,11 @@ function! Lyqi_key()
             " character keys; interpreted after conversion to char
             let b:input_key = nr2char(b:input_key)
             if b:input_key == 't'
-                exe "normal a \\times " . input("Fraction: ", "2/3") . " {" 
+                exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
                 redraw
                 continue
                 if b:input_key == '}'
-                    exe "normal a } "
+                    exe "normal i} "
                     redraw
                     continue
                 endif
