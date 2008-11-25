@@ -356,8 +356,10 @@ endfunction
 function! Lyqi_key()
     let b:input_key = 1
     while b:input_key !~ 'k2' 
+        normal mn 
         call search('\_s', 'c')
         call setline('.',  substitute(getline('.'), " \\+", " ", "g"))
+        normal `n
         2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
         match WarningMsg /\%#/
         "positions the cursor at current or following whitespace. Doesn't
@@ -390,9 +392,13 @@ function! Lyqi_key()
             continue
         elseif b:input_key =~ "ku"
             normal k
-            "call search('\_s', '')
+            call search('\_s', 'b')
             redraw
             "match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            continue
+        elseif b:input_key == 'A'
+            exe "normal A " 
+            redraw
             continue
         elseif b:input_key == 't'
             exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
