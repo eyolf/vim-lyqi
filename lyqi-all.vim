@@ -69,6 +69,7 @@
 "======================================================================
 if exists("g:loaded_Lyqi")
     delfun Lyqi_init
+    "delfun Lyqi_tonality
     delfun Lyqi_key
     delfun Get_current_note
 endif
@@ -130,7 +131,47 @@ parsed_note = re.compile(notestring,  re.VERBOSE)
 #
 # TODO: add functions for art and add
 #
+
 # Python functions {{{1
+
+
+#======================================================================
+                                 #set_tonality {{{2
+#======================================================================
+def set_tonality():
+    tonality = vim.eval('b:tonality')
+    if tonality == 'c\major' or 'd\dorian' or 'e\phrygian' or 'f\lydian' or 'g\mixolydian' or 'a\minor':
+        pitches = ( "c", "d", "e", "f", "g", "a", "b", "s", "r", "R" )
+    elif tonality == 'g\major' or 'a\dorian' or 'b\phrygian' or 'c\lydian' or 'd\mixolydian' or 'e\minor':
+        pitches = ( "c", "d", "e", "fis", "g", "a", "b", "s", "r", "R" )
+    elif tonality == 'd\major' or 'e\dorian' or 'fis\phrygian' or 'g\lydian' or 'a\mixolydian' or 'b\minor':
+        pitches = ( "cis", "d", "e", "fis", "g", "a", "b", "s", "r", "R" )
+    elif tonality == 'a\major' or 'b\dorian' or 'cis\phrygian' or 'd\lydian' or 'e\mixolydian' or 'fis\minor':
+        pitches = ( "cis", "d", "e", "fis", "gis", "a", "b", "s", "r", "R" )
+    elif tonality == 'e\major' or 'fis\dorian' or 'gis\phrygian' or 'a\lydian' or 'b\mixolydian' or 'cis\minor':
+        pitches = ( "cis", "dis", "e", "fis", "gis", "a", "b", "s", "r", "R" )
+    elif tonality == 'b\major' or 'cis\dorian' or 'dis\phrygian' or 'e\lydian' or 'fis\mixolydian' or 'gis\minor':
+        pitches = ( "cis", "dis", "e", "fis", "gis", "ais", "b", "s", "r", "R" )
+    elif tonality == 'fis' or 'gis\dorian' or 'ais\phrygian' or 'b\lydian' or 'cis\mixolydian' or 'dis\minor':
+        pitches = ( "cis", "dis", "eis", "fis", "gis", "ais", "b", "s", "r", "R" )
+    elif tonality == 'ges\major' or 'aes\dorian' or 'bes\phrygian' or 'ces\lydian' or 'des\mixolydian' or 'es\minor':
+        pitches = ( "ces", "des", "ees", "f", "ges", "aes", "bes", "s", "r", "R" )
+    elif tonality == 'des\major' or 'ees\dorian' or 'f\phrygian' or 'ges\lydian' or 'aes\mixolydian' or 'bes\minor':
+        pitches = ( "c", "des", "ees", "f", "ges", "aes", "bes", "s", "r", "R" )
+    elif tonality == 'aes\major' or 'bes\dorian' or 'c\phrygian' or 'des\lydian' or 'ees\mixolydian' or 'f\minor':
+        pitches = ( "c", "des", "ees", "f", "g", "aes", "bes", "s", "r", "R" )
+    elif tonality == 'ees\major' or 'f\dorian' or 'g\phrygian' or 'aes\lydian' or 'bes\mixolydian' or 'c\minor':
+        pitches = ( "c", "d", "ees", "f", "g", "aes", "bes", "s", "r", "R" )
+    elif tonality == 'bes\major' or 'c\dorian' or 'd\phrygian' or 'ees\lydian' or 'f\mixolydian' or 'g\minor':
+        pitches = ( "c", "d", "ees", "f", "g", "a", "bes", "s", "r", "R" )
+    elif tonality == 'f\major' or 'g\dorian' or 'a\phrygian' or 'bes\lydian' or 'c\mixolydian' or 'd\minor':
+        pitches = ( "c", "d", "ees", "f", "g", "a", "bes", "s", "r", "R" )
+    else:
+        pitches = ( "c", "d", "e", "f", "g", "a", "b", "s", "r", "R" )
+
+    pitchmap = dict(zip(pitch_keys, pitches))
+
+
 #======================================================================
                                 #Parse {{{2
 #======================================================================
@@ -154,7 +195,7 @@ def pitch(input_key):
     if vim.eval("col('.')") == 1:
         vim.command("normal i" + n)
     elif vim.eval("col('$')-col('.')") == 1:
-        vim.command("normal a " + n)
+        vim.command("exe 'normal a ' . n")
     else:
         n += " " 
         vim.command("normal a" + n)
@@ -251,13 +292,13 @@ def dot():
 
 
 #dur = siste_dur
-#def find_prev_dur():
-#    dur_search = []
-#    for i in durs:
-#        dur_search[i] = '\\(' + durs[i] + '\\)'
-#    dur_str = '\\|'.join(dur_search)
-#    dur_match = vim.command("call search("+search_str+", 'bcpn')")
-#    current['dur'] = durs[dur_match-1]
+def find_prev_dur():
+   dur_search = []
+   for i in durs:
+       dur_search[i] = '\\(' + durs[i] + '\\)'
+   dur_str = '\\|'.join(dur_search)
+   dur_match = vim.command("search("+search_str+", 'bcpn')")
+   current['dur'] = durs[dur_match-1]
 
 #======================================================================
                              #make_note {{{2
@@ -286,7 +327,8 @@ def process_key():
     elif key in dot_keys:
         dot()
     else:
-        vim.command("normal a " + key)
+        key = " " + key + " "
+        vim.command("normal a" + key)
 EOF
 endfun
 " }}}2
@@ -312,79 +354,77 @@ endfunction
                               "Lyqi_key {{{2
 "======================================================================
 function! Lyqi_key()
-    2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
-    match WarningMsg /\%#/
     let b:input_key = 1
-    while b:input_key != "å" 
+    while b:input_key !~ 'k2' 
+        call search('\_s', 'c')
+        call setline('.',  substitute(getline('.'), " \\+", " ", "g"))
+        2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+        match WarningMsg /\%#/
         "positions the cursor at current or following whitespace. Doesn't
         "capture repeated whitespace, but never mind... can be cleaned up with
         "a general function 
         "call cursor(".", searchpos('\_s', 'ce')[1])
-        call search('\_s', 'c')
         redraw
         "input key press
         " navigation keys; interpreted directly
-        let b:input_key = getchar()
-        if b:input_key == "\<Left>"
+        let b:input_key = Getchar()
+        if b:input_key =~ "kl"
             call search('\_s', 'b')
             redraw
-            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            "match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
             continue
-        elseif b:input_key == "\<Right>"
+        elseif b:input_key == '.'
+            exe "normal a\\fermata "
+            redraw
+            continue
+        elseif b:input_key =~ "kr"
             call search('\_s', '')
             redraw
-            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            "match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
             continue
-        elseif b:input_key == "\<Down>"
+        elseif b:input_key =~ "kd"
             normal j
             call search('\_s', '')
             redraw
-            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            "match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
             continue
-        elseif b:input_key == "\<Up>"
+        elseif b:input_key =~ "ku"
             normal k
-            call search('\_s', '')
+            "call search('\_s', '')
             redraw
-            match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
+            "match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
             continue
+        elseif b:input_key == 't'
+            exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
+            redraw
+            continue
+        elseif b:input_key == '~'
+            exe "normal a~ "
+            redraw
+            continue
+        elseif b:input_key == '\'
+            exe "normal a\\" . input("Escaped sequence: ") . " "
+            redraw
+            continue
+        elseif b:input_key == 'x'
+            call Get_current_note()
+            let line = getline('.')
+            substitute(eval(line), " \+", " ", "g")
+            redraw
+            continue
+        elseif b:input_key == 'z'
+            normal u
+            redraw
+            continue
+        elseif b:input_key == 'Z'
+            redo
+            redraw
+            continue
+        elseif b:input_key =~ 'k2'
+            mat
+            break
         else
-            " character keys; interpreted after conversion to char
-            let b:input_key = nr2char(b:input_key)
-            if b:input_key == 't'
-                exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
-                redraw
-                continue
-                if b:input_key == '}'
-                    exe "normal i} "
-                    redraw
-                    continue
-                endif
-            elseif b:input_key == '.'
-                exe "normal a\fermata "
-                redraw
-                continue
-            elseif b:input_key == '\'
-                exe "normal a\\" . input("Escaped sequence: ") . " "
-                redraw
-                continue
-            elseif b:input_key == 'x'
-                call Get_current_note()
-                let line = getline('.')
-                substitute(eval(line), " \+", " ", "g")
-                redraw
-                continue
-            elseif b:input_key == 'z'
-                normal u
-                redraw
-                continue
-            elseif b:input_key == 'Z'
-                redo
-                redraw
-                continue
-            else
-                python process_key()
-                redraw
-            endif
+            python process_key()
             redraw
         endif
         redraw
@@ -392,10 +432,36 @@ function! Lyqi_key()
     match
 endfunction 
 
+"======================================================================
+"fun! Lyqi_tonality {{{2
+"======================================================================
+
+fun! Lyqi_tonality()
+    "Search back to previous '\key'
+    "search('key *', 'be')
+    "normal /[a-g] *\\\S*/
+    "let b:tonality = getreg('/') 
+    "if  b:tonality == ''
+    let b:tonality = input('Key: ')
+    "endif
+    py set_tonality()
+endfun
+
+"======================================================================
+"general utility functions {{{1
+"======================================================================
+fun! Getchar()
+  let c = getchar()
+  if c != 0
+    let c = nr2char(c)
+  endif
+  return c
+endfun
+
 match
 
 command! LyqiMode :call Lyqi_key()
-noremap <f2> LyqiMode<cr>
+noremap <f2> :LyqiMode<cr>
 
 
 " vim:fdm=marker
