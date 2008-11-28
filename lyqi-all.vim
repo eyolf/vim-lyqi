@@ -195,11 +195,11 @@ def pitch(input_key):
     if vim.eval("col('.')") == 1:
         vim.command("normal i" + n)
     elif vim.eval("col('$')-col('.')") == 1:
+        n += " " 
         vim.command("exe 'normal a ' . n")
     else:
-        n += " " 
-        vim.command("normal a" + n)
-        #vim.command("normal a ")
+        #n += " " 
+        vim.command("normal a " + n)
 
 #======================================================================
 
@@ -243,6 +243,7 @@ def dur(input_key):
     vim.command("normal i" + make_note())
 
 #======================================================================
+
                        #cautionary accidentals {{{2
 #======================================================================
 def caut(input_key):
@@ -356,10 +357,10 @@ endfunction
 function! Lyqi_key()
     let b:input_key = 1
     while b:input_key !~ 'k2' 
-        normal mn 
+        "normal mn 
         call search('\_s', 'c')
-        call setline('.',  substitute(getline('.'), " \\+", " ", "g"))
-        normal `n
+        "call setline('.',  substitute(getline('.'), " \\+", " ", "g"))
+        "normal `n
         2match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
         match WarningMsg /\%#/
         "positions the cursor at current or following whitespace. Doesn't
@@ -396,10 +397,10 @@ function! Lyqi_key()
             redraw
             "match Error /\<\S\{-}\%#\S\{-}\>\|^\%#\s*/
             continue
-        elseif b:input_key == 'A'
-            exe "normal A " 
-            redraw
-            continue
+        "elseif b:input_key == 'A'
+            "exe "normal A " 
+            "redraw
+            "continue
         elseif b:input_key == 't'
             exe "normal a\\times " . input("Fraction: ", "2/3") . " { " 
             redraw
