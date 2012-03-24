@@ -356,7 +356,8 @@ endfunction
 "======================================================================
 function! Lyqi_key()
     let b:input_key = 1
-    while b:input_key !~ 'k2' 
+    "while b:input_key !~ 'k2' 
+    while b:input_key !~ 'å' 
         "normal mn 
         call search('\_s', 'c')
         "call setline('.',  substitute(getline('.'), " \\+", " ", "g"))
@@ -416,7 +417,7 @@ function! Lyqi_key()
         elseif b:input_key == 'x'
             call Get_current_note()
             let line = getline('.')
-            substitute(eval(line), " \+", " ", "g")
+            substitute(eval("line"), "\s\+", " ", "g")
             redraw
             continue
         elseif b:input_key == 'z'
